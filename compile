@@ -11,8 +11,9 @@ printHelp() {
 
 run="OFF"
 disableCPUScaling=0
+compilerFamily=gcc
 
-while getopts ":hrd" arg; do
+while getopts "hrdc:" arg; do
     case $arg in
         h) printHelp
            exit 0
@@ -23,12 +24,29 @@ while getopts ":hrd" arg; do
            defaultCPUGovernor=$(cat /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor | head -n 1)
            trap "sudo cpupower frequency-set --governor $defaultCPUGovernor >/dev/null 2>&1" EXIT
            ;;
+        c) compilerFamily="${OPTARG}"
+           ;;
         \?) echo "Unsupported flag: ${arg}"
             printHelp
             exit 1;
             ;;
     esac
 done
+
+if [ "${compilerFamily}" == "gcc" ]; then
+    cc=$(which gcc)
+    cxx=$(which g++)
+elif [ "${compilerFamily}" == "clang" ]; then
+    cc=$(which clang)
+    cxx=$(which clang++)
+else
+    echo "Unsupported compiler: ${compilerFamily}"
+    printHelp
+    exit 1
+fi
+
+export CC=$cc
+export CXX=$cxx
 
 sourceDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 buildDir="${sourceDir}/build"
