@@ -1,0 +1,49 @@
+#!/bin/bash
+
+printHelp() {
+    echo "Compile [and run] benchmarks"
+    echo "Usage: compile [OPTIONS]"
+    echo "[-h|r|d]"
+    echo "h    print this help and exit"
+    echo "r    run benchmarks after compilation"
+    echo "d    disable CPU scaling for the duration of the benchmarks"
+}
+
+run="OFF"
+disableCPUScaling=0
+
+while getopts ":hrd" arg; do
+    case $arg in
+        h) printHelp
+           exit 0
+           ;;
+        r) run="ON"
+           ;;
+        d) disableCPUScaling=1
+           defaultCPUGovernor=$(cat /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor | head -n 1)
+           trap "sudo cpupower frequency-set --governor $defaultCPUGovernor >/dev/null 2>&1" EXIT
+           ;;
+        \?) echo "Unsupported flag: ${arg}"
+            printHelp
+            exit 1;
+            ;;
+    esac
+done
+
+sourceDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+buildDir="${sourceDir}/build"
+
+mkdir -p "${buildDir}"
+rm -rf ${buildDir}/*
+
+cmake -H${sourceDir}                            \
+      -B${buildDir}                             \
+      -DCMAKE_BUILD_TYPE:STRING="Release"       \
+      -DCMAKE_CXX_FLAGS:STRING=" -march=native" \
+      -DRUN_BENCHMARKS:BOOL=$run                \
+
+cd "${buildDir}"
+if [ $disableCPUScaling -ne 0 ]; then
+    sudo cpupower frequency-set --governor performance >/dev/null 2>&1
+fi
+make
