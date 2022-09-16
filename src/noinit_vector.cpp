@@ -10,7 +10,28 @@
 constexpr const std::size_t arraySize = 1e6;
 
 
-inline double process(double index)
+template <class T>
+class Wrapper
+{
+public:
+    Wrapper() noexcept {};
+    Wrapper(T value) noexcept : _value(value) {}
+    Wrapper(Wrapper&& r_rhs) noexcept = default;
+    Wrapper(const Wrapper& r_rhs) noexcept = default;
+    Wrapper& operator=(T r_rhs) noexcept {_value = r_rhs; return *this;}
+    Wrapper& operator=(Wrapper&& r_rhs) noexcept = default;
+    Wrapper& operator=(const Wrapper& r_rhs) noexcept = default;
+
+    operator T() const {return _value;}
+    operator T&() {return _value;}
+
+private:
+    T _value;
+}; // struct Wrapper
+
+
+template <class T>
+inline T process(T index)
 {
     return std::sqrt(index);
 }
@@ -60,11 +81,24 @@ template<typename T>
 using NoInitVector = std::vector<T,boost::noinit_adaptor<std::allocator<T>>>;
 
 
-BENCHMARK_TEMPLATE(growAndInitialize, std::vector<double>);
-BENCHMARK_TEMPLATE(resizeAndInitialize, std::vector<double>);
-BENCHMARK_TEMPLATE(reserveAndInitialize, std::vector<double>);
-BENCHMARK_TEMPLATE(growAndInitialize, NoInitVector<double>);
-BENCHMARK_TEMPLATE(resizeAndInitialize, NoInitVector<double>);
-BENCHMARK_TEMPLATE(reserveAndInitialize, NoInitVector<double>);
+// --- Standard vector of standard built-ins ---
+BENCHMARK_TEMPLATE(growAndInitialize, std::vector<double>)->Name("Standard vector of built-ins: grow");
+BENCHMARK_TEMPLATE(resizeAndInitialize, std::vector<double>)->Name("Standard vector of built-ins: resize");
+BENCHMARK_TEMPLATE(reserveAndInitialize, std::vector<double>)->Name("Standard vector of built-ins: reserve");
+
+// --- No-init vector of standard built-ins ---
+BENCHMARK_TEMPLATE(growAndInitialize, NoInitVector<Wrapper<double>>)->Name("No-init vector of built-ins: grow");
+BENCHMARK_TEMPLATE(resizeAndInitialize, NoInitVector<Wrapper<double>>)->Name("No-init vector of built-ins: resize");
+BENCHMARK_TEMPLATE(reserveAndInitialize, NoInitVector<Wrapper<double>>)->Name("No-init vector of built-ins: reserve");
+
+// --- Standard vector of wrapped built-ins ---
+BENCHMARK_TEMPLATE(growAndInitialize, std::vector<Wrapper<double>>)->Name("Standard vector of wrapped built-ins: grow");
+BENCHMARK_TEMPLATE(resizeAndInitialize, std::vector<Wrapper<double>>)->Name("Standard vector of wrapped built-ins: resize");
+BENCHMARK_TEMPLATE(reserveAndInitialize, std::vector<Wrapper<double>>)->Name("Standard vector of wrapped built-ins: reserve");
+
+// --- No-init vector of wrapped built-ins ---
+BENCHMARK_TEMPLATE(growAndInitialize, NoInitVector<Wrapper<double>>)->Name("No-init vector of wrapped built-ins: grow");
+BENCHMARK_TEMPLATE(resizeAndInitialize, NoInitVector<Wrapper<double>>)->Name("No-init vector of wrapped built-ins: resize");
+BENCHMARK_TEMPLATE(reserveAndInitialize, NoInitVector<Wrapper<double>>)->Name("No-init vector of wrapped built-ins: reserve");
 
 BENCHMARK_MAIN();
